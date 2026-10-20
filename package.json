@@ -11,6 +11,7 @@
     "dev:web": "vite",
     "build": "vite build",
     "start": "tsx src/server/index.ts",
+    "library:sync": "tsx scripts/sync-library.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

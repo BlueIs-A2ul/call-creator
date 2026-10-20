@@ -8,8 +8,7 @@ import { exportOptionsSchema, libraryInputSchema, lyricsInputSchema, projectSche
 import { extractFirstUrl } from '@shared/urls'
 import { parseLrc } from '@shared/lrc'
 import type { LyricsResult, ProviderId } from '@shared/types'
-import { createLibraryService } from './library/service'
-import { searchLibrary } from './library/service'
+import { createLibraryService, DEFAULT_LIBRARY_URL, searchLibrary } from './library/service'
 import { createProjectStore, StoreError } from './projects/store'
 import { writeXlsx, asExcelBuffer } from './export/xlsx'
 import { ProviderError } from './lyrics/errors'
@@ -22,6 +21,7 @@ export interface AppOptions {
   providers?: LyricsProvider[]
   serveStatic?: boolean
   libraryUrl?: string
+  libraryFile?: string
 }
 
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
@@ -30,10 +30,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   const providers = options.providers ?? [neteaseProvider, qqProvider]
   const store = createProjectStore(options.dataDir)
-  const library = createLibraryService(
-    options.dataDir,
-    options.libraryUrl ?? 'https://glx48call.dpdns.org/data/json/single_skill.json',
-  )
+  const library = createLibraryService({
+    dataDir: options.dataDir,
+    localFile: options.libraryFile,
+    remoteUrl: options.libraryUrl ?? DEFAULT_LIBRARY_URL,
+  })
 
   app.setErrorHandler((error, _request, reply) => {
     if (error instanceof ProviderError) {
@@ -105,6 +106,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     return {
       entries: searchLibrary(result.entries, query.q ?? '', tags),
       meta: result.meta,
+      source: result.source,
       stale: result.stale,
       allTags: [...new Set(result.entries.flatMap((entry) => entry.keywords))].sort(),
     }

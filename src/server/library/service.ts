@@ -12,12 +12,23 @@ interface RawEntry {
   last_updated?: string
 }
 
-interface LibraryMeta {
+export interface LibraryMeta {
   fetchedAt: string
   count: number
 }
 
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+export type LibrarySource = 'cache' | 'local' | 'remote'
+
+export interface LibrarySnapshot {
+  entries: LibraryEntry[]
+  meta: LibraryMeta | null
+  source: LibrarySource
+  /** true 表示这次本想刷新但失败了，返回的是更旧的数据 */
+  stale: boolean
+}
+
+export const DEFAULT_LIBRARY_URL = 'https://glx48call.dpdns.org/data/json/single_skill.json'
+export const DEFAULT_LIBRARY_FILE = join('library', 'library.json')
 
 export function toBuiltinEntries(raw: unknown): LibraryEntry[] {
   if (!Array.isArray(raw)) throw new Error('词库响应不是数组')
@@ -40,6 +51,19 @@ export function toBuiltinEntries(raw: unknown): LibraryEntry[] {
       origin: 'builtin' as const,
     }
   })
+}
+
+/** 兼容两种落盘格式：上游原始数组，以及已经补过 id/origin 的数组。 */
+export function normalizeEntries(raw: unknown): LibraryEntry[] {
+  if (!Array.isArray(raw)) throw new Error('词库数据不是数组')
+  const looksNormalized = raw.every(
+    (item) =>
+      Boolean(item) &&
+      typeof item === 'object' &&
+      typeof (item as { id?: unknown }).id === 'string' &&
+      typeof (item as { origin?: unknown }).origin === 'string',
+  )
+  return looksNormalized ? (raw as LibraryEntry[]) : toBuiltinEntries(raw)
 }
 
 export function mergeLibrary(
@@ -99,52 +123,92 @@ async function readJson<T>(file: string, fallback: T): Promise<T> {
   }
 }
 
-async function writeJson(file: string, value: unknown): Promise<void> {
+export async function writeJson(file: string, value: unknown): Promise<void> {
   await mkdir(dirname(file), { recursive: true })
   const temp = `${file}.${nanoid(6)}.tmp`
   await writeFile(temp, JSON.stringify(value, null, 2), 'utf8')
   await rename(temp, file)
 }
 
+/** 拉取上游词库并归一化成带 id 的条目，供服务与 `npm run library:sync` 复用。 */
+export async function fetchLibraryEntries(
+  remoteUrl: string,
+): Promise<{ entries: LibraryEntry[]; meta: LibraryMeta }> {
+  const response = await fetch(remoteUrl, { signal: AbortSignal.timeout(15_000) })
+  if (!response.ok) throw new Error(`词库请求失败（HTTP ${response.status}）`)
+  const entries = normalizeEntries(await response.json())
+  if (entries.length === 0) throw new Error('词库响应为空')
+  return { entries, meta: { fetchedAt: new Date().toISOString(), count: entries.length } }
+}
+
+export interface LibraryServiceOptions {
+  dataDir: string
+  /** 仓库内的词库快照，默认 `library/library.json` */
+  localFile?: string
+  /** 只有显式刷新（refresh=1 / 没有本地数据）时才会请求 */
+  remoteUrl?: string
+}
+
 export interface LibraryService {
-  getMerged(forceRefresh?: boolean): Promise<{
-    entries: LibraryEntry[]
-    meta: LibraryMeta | null
-    stale: boolean
-  }>
+  getMerged(forceRefresh?: boolean): Promise<LibrarySnapshot>
   addUser(input: Omit<LibraryEntry, 'id' | 'origin'>): Promise<LibraryEntry>
   updateUser(id: string, patch: Partial<LibraryEntry>): Promise<LibraryEntry>
   removeUser(id: string): Promise<void>
   setHidden(id: string, hidden: boolean): Promise<void>
 }
 
-export function createLibraryService(dataDir: string, remoteUrl: string): LibraryService {
-  const builtinFile = join(dataDir, 'cache', 'library.json')
-  const metaFile = join(dataDir, 'cache', 'library.meta.json')
-  const userFile = join(dataDir, 'library.user.json')
-  const hiddenFile = join(dataDir, 'library.hidden.json')
+export function createLibraryService(options: LibraryServiceOptions): LibraryService {
+  const localFile = options.localFile ?? DEFAULT_LIBRARY_FILE
+  const remoteUrl = options.remoteUrl
+  const cacheFile = join(options.dataDir, 'cache', 'library.json')
+  const metaFile = join(options.dataDir, 'cache', 'library.meta.json')
+  const userFile = join(options.dataDir, 'library.user.json')
+  const hiddenFile = join(options.dataDir, 'library.hidden.json')
 
-  async function loadBuiltin(forceRefresh: boolean): Promise<{ entries: LibraryEntry[]; meta: LibraryMeta | null; stale: boolean }> {
-    const cached = await readJson<LibraryEntry[] | null>(builtinFile, null)
-    const meta = await readJson<LibraryMeta | null>(metaFile, null)
-    const fresh = meta !== null && Date.now() - Date.parse(meta.fetchedAt) < CACHE_TTL_MS
-
-    if (!forceRefresh && cached && fresh) {
-      return { entries: cached, meta, stale: false }
-    }
-
+  function safeNormalize(value: unknown): LibraryEntry[] | null {
     try {
-      const response = await fetch(remoteUrl, { signal: AbortSignal.timeout(15_000) })
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const entries = toBuiltinEntries(await response.json())
-      const nextMeta = { fetchedAt: new Date().toISOString(), count: entries.length }
-      await writeJson(builtinFile, entries)
-      await writeJson(metaFile, nextMeta)
-      return { entries, meta: nextMeta, stale: false }
-    } catch (error) {
-      if (cached) return { entries: cached, meta, stale: true }
-      throw error
+      const entries = normalizeEntries(value)
+      return entries.length > 0 ? entries : null
+    } catch {
+      return null
     }
+  }
+
+  async function readLocal(): Promise<LibraryEntry[] | null> {
+    return safeNormalize(await readJson<unknown>(localFile, null))
+  }
+
+  async function refreshFromRemote(): Promise<LibrarySnapshot> {
+    if (!remoteUrl) throw new Error(`没有可用的词库数据，请先运行 npm run library:sync 生成 ${localFile}`)
+    const remote = await fetchLibraryEntries(remoteUrl)
+    await writeJson(cacheFile, remote.entries)
+    await writeJson(metaFile, remote.meta)
+    return { entries: remote.entries, meta: remote.meta, source: 'remote', stale: false }
+  }
+
+  async function loadBuiltin(forceRefresh: boolean): Promise<LibrarySnapshot> {
+    const cached = safeNormalize(await readJson<unknown>(cacheFile, null))
+    const meta = await readJson<LibraryMeta | null>(metaFile, null)
+
+    if (forceRefresh) {
+      try {
+        return await refreshFromRemote()
+      } catch (error) {
+        const fallback = cached ?? (await readLocal())
+        if (fallback) {
+          return { entries: fallback, meta, source: cached ? 'cache' : 'local', stale: true }
+        }
+        throw error
+      }
+    }
+
+    // 默认路径完全不联网：先用上次刷新留下的运行时缓存，再用仓库里的快照
+    if (cached) return { entries: cached, meta, source: 'cache', stale: false }
+    const local = await readLocal()
+    if (local) return { entries: local, meta: null, source: 'local', stale: false }
+
+    // 本地确实没有数据时才退回远端（首次部署且未同步过快照）
+    return refreshFromRemote()
   }
 
   return {
@@ -155,6 +219,7 @@ export function createLibraryService(dataDir: string, remoteUrl: string): Librar
       return {
         entries: mergeLibrary(builtin.entries, user, hidden),
         meta: builtin.meta,
+        source: builtin.source,
         stale: builtin.stale,
       }
     },
