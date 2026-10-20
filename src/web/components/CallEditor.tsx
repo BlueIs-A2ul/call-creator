@@ -86,6 +86,18 @@ export function CallEditor({ row, onClose }: Props) {
           </div>
         )}
         <div className="modal-actions">
+          {row.call && (
+            <button
+              className="btn btn-ghost danger-text"
+              title="删掉这一行的 call，歌词行保留"
+              onClick={() => {
+                updateCall(row.id, undefined)
+                onClose()
+              }}
+            >
+              清空这个 call
+            </button>
+          )}
           {grouped && (
             <button
               className="btn btn-ghost"

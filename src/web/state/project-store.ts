@@ -31,6 +31,8 @@ interface ProjectState {
   updateCall: (id: string, call: CallCell | undefined) => void
   /** 把词库里的一个 call 按顺序切给选中的行；连续的行合成一块 */
   applyCallToRows: (rowIds: string[], source: CallSource) => void
+  /** 清掉这些行的 call（保留歌词行）；清掉块中间一行时，块会自然断成两块 */
+  clearCalls: (rowIds: string[]) => void
   /** 把某一行从所在的 call 块里拆出来，其余行继续成块 */
   unlinkFromGroup: (id: string) => void
 }
@@ -191,6 +193,18 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       rows: project.rows.map((row) => {
         const call = callByRow.get(row.id)
         return call ? { ...row, call } : row
+      }),
+    }))
+  },
+
+  clearCalls: (rowIds) => {
+    if (rowIds.length === 0) return
+    const removing = new Set(rowIds)
+    get().commit('', (current) => ({
+      ...current,
+      rows: current.rows.map((row) => {
+        if (!removing.has(row.id) || !row.call) return row
+        return { id: row.id, lyric: row.lyric, timeMs: row.timeMs }
       }),
     }))
   },

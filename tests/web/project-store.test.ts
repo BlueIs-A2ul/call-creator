@@ -155,4 +155,40 @@ describe('跨行的 call 块', () => {
     useProjectStore.getState().undo()
     expect(useProjectStore.getState().project!.rows.every((row) => !row.call)).toBe(true)
   })
+
+  it('清除整块的 call，歌词行保留', () => {
+    withRows([
+      { id: 'r1', lyric: '一' },
+      { id: 'r2', lyric: '二' },
+      { id: 'r3', lyric: '三' },
+    ])
+    useProjectStore.getState().applyCallToRows(['r1', 'r2', 'r3'], entry)
+    useProjectStore.getState().clearCalls(['r1', 'r2', 'r3'])
+
+    const rows = useProjectStore.getState().project!.rows
+    expect(rows.every((row) => row.call === undefined)).toBe(true)
+    expect(rows.map((row) => row.lyric)).toEqual(['一', '二', '三'])
+  })
+
+  it('清除块中间一行会让块断成两块', () => {
+    withRows([
+      { id: 'r1', lyric: '一' },
+      { id: 'r2', lyric: '二' },
+      { id: 'r3', lyric: '三' },
+    ])
+    useProjectStore.getState().applyCallToRows(['r1', 'r2', 'r3'], entry)
+    useProjectStore.getState().clearCalls(['r2'])
+
+    const rows = useProjectStore.getState().project!.rows
+    expect(rows[1].call).toBeUndefined()
+    expect(rows[0].call?.groupId).toBe(rows[2].call?.groupId)
+  })
+
+  it('清除 call 可以撤销', () => {
+    withRows([{ id: 'r1', lyric: '一' }])
+    useProjectStore.getState().applyCallToRows(['r1'], entry)
+    useProjectStore.getState().clearCalls(['r1'])
+    useProjectStore.getState().undo()
+    expect(useProjectStore.getState().project!.rows[0].call?.label).toBe('首推call')
+  })
 })

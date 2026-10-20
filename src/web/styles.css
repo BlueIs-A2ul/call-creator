@@ -81,6 +81,18 @@ tr:hover .row-actions, tr:focus-within .row-actions { display: flex; }
   .row-actions { display: flex; }
 }
 tr.is-blank td { background: #fbfbf8; }
+.cell-call { position: relative; }
+.clear-call {
+  display: none; position: absolute; top: 3px; right: 4px; z-index: 2;
+  padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px;
+  background: var(--panel); color: var(--muted); font-size: 11px; line-height: 1.5; cursor: pointer;
+}
+tr:hover .clear-call, tr:focus-within .clear-call { display: block; }
+.clear-call:hover { color: var(--danger); border-color: var(--danger); }
+@media (hover: none) {
+  .clear-call { display: block; }
+}
+.danger-text { color: var(--danger); }
 .lyric-input {
   width: 100%; border: none; outline: none; resize: none; padding: 9px 10px;
   font: inherit; line-height: 1.55; background: transparent; min-height: 38px;

@@ -15,6 +15,7 @@ export function SheetTable() {
   const deleteRows = useProjectStore((state) => state.deleteRows)
   const moveRow = useProjectStore((state) => state.moveRow)
   const applyCallToRows = useProjectStore((state) => state.applyCallToRows)
+  const clearCalls = useProjectStore((state) => state.clearCalls)
   const [editing, setEditing] = useState<Row | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [selected, setSelected] = useState<string[]>([])
@@ -23,6 +24,10 @@ export function SheetTable() {
 
   const groups = useMemo(() => callGroupIndex(project.rows), [project.rows])
   const selectedSet = useMemo(() => new Set(selected), [selected])
+  const selectedWithCall = useMemo(
+    () => selected.filter((id) => project.rows.some((row) => row.id === id && row.call)),
+    [selected, project.rows],
+  )
 
   const selectRow = (index: number, event: React.MouseEvent) => {
     const rows = project.rows
@@ -54,12 +59,25 @@ export function SheetTable() {
     setPickerOpen(false)
   }
 
+  const clearSelectedCalls = () => {
+    clearCalls([...selectedSet])
+    setSelected([])
+  }
+
   return (
     <>
       {selected.length > 0 && (
         <div className="selection-bar">
           <span>已选 {selected.length} 行</span>
           <button className="btn btn-primary" onClick={() => setPickerOpen(true)}>应用一个 call</button>
+          <button
+            className="btn btn-ghost"
+            onClick={clearSelectedCalls}
+            disabled={selectedWithCall.length === 0}
+            title="只清掉 call，歌词行保留"
+          >
+            清除 call{selectedWithCall.length > 0 ? `（${selectedWithCall.length}）` : ''}
+          </button>
           <button className="btn btn-ghost" onClick={() => setSelected([])}>取消选择</button>
           <span className="muted">
             {selected.length > 1
@@ -142,7 +160,7 @@ export function SheetTable() {
                   <td>
                     <LyricCell value={row.lyric} onChange={(lyric) => updateLyric(row.id, lyric)} />
                   </td>
-                  <td>
+                  <td className="cell-call">
                     <CallCell
                       call={row.call}
                       variables={project.variables}
@@ -152,6 +170,16 @@ export function SheetTable() {
                       size={slotInfo?.size ?? 1}
                       onClick={() => setEditing(row)}
                     />
+                    {row.call && (
+                      <button
+                        className="clear-call"
+                        title={slotInfo && slotInfo.size > 1 ? '清除这一行的 call（整块要清就选中整块再点上方「清除 call」）' : '清除这一行的 call'}
+                        aria-label="清除这一行的 call"
+                        onClick={() => clearCalls([row.id])}
+                      >
+                        清除
+                      </button>
+                    )}
                   </td>
                 </tr>
               )
