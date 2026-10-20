@@ -1,6 +1,6 @@
 import ExcelJS from 'exceljs'
 import { describe, expect, it } from 'vitest'
-import { writeXlsx } from '@server/export/xlsx'
+import { asExcelBuffer, writeXlsx } from '@server/export/xlsx'
 import { DEFAULT_EXPORT_OPTIONS, type Project } from '@shared/types'
 
 const project: Project = {
@@ -19,7 +19,7 @@ describe('writeXlsx', () => {
   it('生成可读回的工作簿', async () => {
     const buffer = await writeXlsx(project, DEFAULT_EXPORT_OPTIONS)
     const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(buffer)
+    await workbook.xlsx.load(asExcelBuffer(buffer))
     const sheet = workbook.worksheets[0]
     expect(sheet.getCell('A1').value).toBe('序号')
     expect(sheet.getCell('B2').value).toBe('hello')

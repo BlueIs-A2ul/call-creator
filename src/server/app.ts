@@ -11,7 +11,7 @@ import type { LyricsResult, ProviderId } from '@shared/types'
 import { createLibraryService } from './library/service'
 import { searchLibrary } from './library/service'
 import { createProjectStore, StoreError } from './projects/store'
-import { writeXlsx } from './export/xlsx'
+import { writeXlsx, asExcelBuffer } from './export/xlsx'
 import { ProviderError } from './lyrics/errors'
 import { neteaseProvider } from './lyrics/netease'
 import { qqProvider } from './lyrics/qq'
@@ -43,10 +43,12 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     if (error instanceof StoreError) {
       return reply.status(error.code === 'NOT_FOUND' ? 404 : 409).send({ code: error.code, message: error.message })
     }
-    if (error.name === 'ZodError') {
-      return reply.status(400).send({ code: 'VALIDATION', message: '请求参数不合法', detail: error.message })
+    const name = (error as { name?: string }).name
+    const message = error instanceof Error ? error.message : String(error)
+    if (name === 'ZodError') {
+      return reply.status(400).send({ code: 'VALIDATION', message: '请求参数不合法', detail: message })
     }
-    return reply.status(500).send({ code: 'INTERNAL', message: '服务器内部错误', detail: error.message })
+    return reply.status(500).send({ code: 'INTERNAL', message: '服务器内部错误', detail: message })
   })
 
   app.get('/api/health', async () => ({ ok: true }))
@@ -79,7 +81,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     if (!file) return reply.status(400).send({ code: 'NO_FILE', message: '没有上传文件' })
     const ExcelJS = (await import('exceljs')).default
     const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(await file.toBuffer())
+    await workbook.xlsx.load(asExcelBuffer(await file.toBuffer()))
     const sheet = workbook.worksheets[0]
     const lines: string[] = []
     sheet?.eachRow((row) => {

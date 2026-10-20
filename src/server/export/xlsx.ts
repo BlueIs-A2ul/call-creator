@@ -31,3 +31,11 @@ export async function writeXlsx(project: Project, options: ExportOptions): Promi
   const buffer = await workbook.xlsx.writeBuffer()
   return Buffer.from(buffer)
 }
+
+/**
+ * ExcelJS 的 d.ts 自己声明了一个 `Buffer extends ArrayBuffer`，而运行时接受 Node Buffer，
+ * 所以在读写工作簿的地方统一做一次类型转换。
+ */
+export function asExcelBuffer(data: Buffer): Parameters<ExcelJS.Workbook['xlsx']['load']>[0] {
+  return data as unknown as Parameters<ExcelJS.Workbook['xlsx']['load']>[0]
+}
