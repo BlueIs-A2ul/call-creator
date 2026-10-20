@@ -45,6 +45,12 @@ describe('SheetTable 间奏徽标', () => {
     render(<SheetTable />)
     expect(screen.queryByText(/间奏 /)).toBeNull()
   })
+
+  it('行号栏的 × 按钮能删除该行', () => {
+    render(<SheetTable />)
+    fireEvent.click(screen.getAllByTitle('删除行')[0])
+    expect(useProjectStore.getState().project!.rows.map((row) => row.lyric)).toEqual(['', '第二句'])
+  })
 })
 
 describe('InterludeDialog', () => {

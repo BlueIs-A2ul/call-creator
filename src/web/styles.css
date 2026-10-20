@@ -59,17 +59,27 @@ body {
 .sheet { width: 100%; border-collapse: collapse; background: var(--panel); table-layout: fixed; }
 .sheet th, .sheet td { border: 1px solid var(--line); vertical-align: top; padding: 0; }
 .sheet th { position: sticky; top: 0; background: #fbfbf9; font-weight: 600; padding: 8px; text-align: left; z-index: 5; }
-.col-no { width: 64px; }
+.col-no { width: 88px; }
 .col-lyric { width: 45%; }
 .col-call { width: auto; }
 .row-no { position: relative; padding: 8px 6px !important; text-align: center; color: var(--muted); font-size: 12px; }
-.insert-btn, .delete-btn {
-  display: none; position: absolute; right: 4px; border: none; background: transparent;
-  cursor: pointer; color: var(--muted); font-size: 14px;
+/* 选行数字居中；插入/删除挂在右侧竖排，和数字拉开距离，避免误触 */
+.row-actions {
+  position: absolute; top: 50%; right: 3px; transform: translateY(-50%);
+  display: none; flex-direction: column; gap: 6px; z-index: 1;
 }
-.insert-btn { top: 2px; }
-.delete-btn { bottom: 2px; }
-tr:hover .insert-btn, tr:hover .delete-btn { display: block; }
+tr:hover .row-actions, tr:focus-within .row-actions { display: flex; }
+.row-actions .row-action {
+  width: 20px; height: 20px; padding: 0; border: 1px solid var(--line);
+  border-radius: 5px; background: var(--panel); color: var(--muted);
+  font-size: 13px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.row-actions .row-action:hover { color: var(--text); border-color: #cfcfc8; background: white; }
+/* 触屏没有 hover，直接常显 */
+@media (hover: none) {
+  .row-actions { display: flex; }
+}
 tr.is-blank td { background: #fbfbf8; }
 .lyric-input {
   width: 100%; border: none; outline: none; resize: none; padding: 9px 10px;

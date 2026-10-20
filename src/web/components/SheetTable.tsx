@@ -105,11 +105,7 @@ export function SheetTable() {
                   }}
                 >
                   <td className="row-no">
-                    <button
-                      className="row-pick"
-                      onClick={(event) => selectRow(index, event)}
-                      title="点一下选中这一行；Shift 连选；Ctrl 多选"
-                    >
+                    <button className="row-pick" onClick={(event) => selectRow(index, event)} title="点一下选中这一行；Shift 连选；Ctrl 多选">
                       {index + 1}
                     </button>
                     {(() => {
@@ -124,8 +120,24 @@ export function SheetTable() {
                         </span>
                       )
                     })()}
-                    <button className="insert-btn" title="在下方插入空白行" onClick={() => insertRow(row.id)}>＋</button>
-                    <button className="delete-btn" title="删除行" onClick={() => deleteRows([row.id])}>×</button>
+                    <div className="row-actions">
+                      <button
+                        className="row-action"
+                        title="在下方插入空白行"
+                        aria-label="在下方插入空白行"
+                        onClick={() => insertRow(row.id)}
+                      >
+                        ＋
+                      </button>
+                      <button
+                        className="row-action"
+                        title="删除行"
+                        aria-label="删除行"
+                        onClick={() => deleteRows([row.id])}
+                      >
+                        ×
+                      </button>
+                    </div>
                   </td>
                   <td>
                     <LyricCell value={row.lyric} onChange={(lyric) => updateLyric(row.id, lyric)} />
