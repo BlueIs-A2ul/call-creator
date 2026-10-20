@@ -51,3 +51,16 @@ export const api = {
     return response.blob()
   },
 }
+
+/**
+ * 保存项目，遇到版本冲突时用服务端最新的 revision 再试一次。
+ * 这是本地单用户工具，冲突只可能来自并发保存，不需要覆盖用户刚写的本地内容。
+ */
+export async function saveProjectWithRecovery(project: Project): Promise<Project> {
+  try {
+    return await api.saveProject(project)
+  } catch (error) {
+    const latest = await api.getProject(project.id)
+    return api.saveProject({ ...project, revision: latest.revision })
+  }
+}

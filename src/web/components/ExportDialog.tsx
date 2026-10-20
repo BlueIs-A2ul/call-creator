@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { DEFAULT_EXPORT_OPTIONS, type ExportOptions } from '@shared/types'
-import { api } from '@web/api'
+import { api, saveProjectWithRecovery } from '@web/api'
 import { useProjectStore } from '@web/state/project-store'
 
 export function ExportDialog({ onClose }: { onClose: () => void }) {
@@ -16,7 +16,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
     setBusy(true)
     setError('')
     try {
-      const saved = await api.saveProject(project)
+      const saved = await saveProjectWithRecovery(project)
       markSaved(saved)
       const blob = await api.exportXlsx(saved.id, options)
       const url = URL.createObjectURL(blob)
@@ -24,7 +24,8 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
       link.href = url
       link.download = `${saved.title}-call-sheet.xlsx`
       link.click()
-      URL.revokeObjectURL(url)
+      // 立刻 revoke 会让部分浏览器取消下载，等下载发起后再释放
+      window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '导出失败')
     } finally {
