@@ -36,8 +36,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     remoteUrl: options.libraryUrl ?? DEFAULT_LIBRARY_URL,
   })
 
-  app.setErrorHandler((error, _request, reply) => {
+  app.setErrorHandler((error, request, reply) => {
     if (error instanceof ProviderError) {
+      // 终端里留一条，出问题时能看到是哪个平台、哪一层失败
+      console.warn(`[lyrics] ${request.url} ${error.code}: ${error.message}${error.detail ? ` (${error.detail})` : ''}`)
       const status = error.code === 'INVALID_URL' ? 400 : error.code === 'NO_LYRICS' ? 422 : 502
       return reply.status(status).send({ code: error.code, message: error.message, detail: error.detail })
     }
@@ -49,7 +51,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     if (name === 'ZodError') {
       return reply.status(400).send({ code: 'VALIDATION', message: '请求参数不合法', detail: message })
     }
-    return reply.status(500).send({ code: 'INTERNAL', message: '服务器内部错误', detail: message })
+    console.error(`[server] ${request.method} ${request.url} 未处理异常:`, error)
+    return reply
+      .status(500)
+      .send({ code: 'INTERNAL', message: `服务器内部错误：${message}`, detail: message })
   })
 
   app.get('/api/health', async () => ({ ok: true }))

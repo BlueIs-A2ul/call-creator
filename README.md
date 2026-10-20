@@ -51,6 +51,18 @@ npm run library:sync
 
 优先级：`data/cache/library.json`（上次刷新结果）→ `library/library.json`（仓库快照）→ 远端（仅在既没缓存也没快照时兜底）。`/api/library` 的 `source` 字段会返回本次数据来自 `cache` / `local` / `remote`，刷新失败但回退到旧数据时 `stale` 为 `true`。
 
+## 抓取失败时看什么
+
+`/api/lyrics` 的失败都会带一个 `code` 和人话说明，界面直接显示这句说明；同时服务端终端会打一行 `[lyrics] ...` 或 `[server] ...`，出问题先看终端。
+
+| code | HTTP | 含义 | 怎么办 |
+| --- | --- | --- | --- |
+| `INVALID_URL` | 400 | 链接不是歌单页 / 域名不在 `music.163.com`、`y.qq.com` 白名单内 | 换成歌曲详情页链接 |
+| `NETWORK` | 502 | 连不上平台：DNS 失败、连接被重置、超时（10 秒）、平台返回 4xx/5xx | 多数是瞬时抖动，服务端已自动重试一次；仍失败就稍后再试或粘贴歌词 |
+| `NO_LYRICS` | 422 | 歌存在但没有可用歌词，或 id 查不到 | 换版本，或粘贴歌词 |
+| `PROVIDER_PARSE_ERROR` | 502 | 平台返回的不是 JSON（常见于被风控拦下） | 稍后再试 |
+| `INTERNAL` | 500 | 本程序自身没料到的异常，`message` 里会带上原始原因 | 看终端堆栈，把那一行贴出来就能定位 |
+
 ## 测试
 
 ```bash
