@@ -1,0 +1,17 @@
+:root {
+  --bg: #f7f7f5;
+  --panel: #ffffff;
+  --line: #e4e4e0;
+  --text: #1f1f1c;
+  --muted: #8a8a84;
+  --accent: #2f6f4f;
+  --accent-soft: #e8f1ec;
+  --danger: #b4453a;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+}
