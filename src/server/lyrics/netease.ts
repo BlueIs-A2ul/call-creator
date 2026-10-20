@@ -30,7 +30,8 @@ export function createNeteaseProvider(deps: ProviderDeps = defaultProviderDeps):
     async fetch({ url }) {
       if (!url) throw new ProviderError('INVALID_URL', '缺少网易云链接')
 
-      const finalUrl = await deps.followRedirects(url)
+      // 分享短链里没有 id，只有短链才需要跟着跳转解析
+      const finalUrl = extractNeteaseId(url) ? url : await deps.followRedirects(url)
       const id = extractNeteaseId(finalUrl)
       if (!id) throw new ProviderError('INVALID_URL', '链接里没有歌曲 id')
 

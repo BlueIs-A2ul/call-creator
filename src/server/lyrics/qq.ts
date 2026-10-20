@@ -85,8 +85,14 @@ export function createQqProvider(deps: ProviderDeps = defaultProviderDeps): Lyri
       return ['y.qq.com', 'i.y.qq.com', 'c6.y.qq.com', 'c.y.qq.com', 'u.y.qq.com'].includes(url.hostname)
     },
     async fetch({ url, text, songmid }) {
-      const finalUrl = url ? await deps.followRedirects(url) : null
-      let mid = songmid ?? (finalUrl ? extractQqSongmid(finalUrl) : null)
+      let finalUrl = url ?? null
+      let mid = songmid ?? (url ? extractQqSongmid(url) : null)
+
+      // 链接里已经有 songmid 时不需要再多请求一次站点首页
+      if (!mid && url) {
+        finalUrl = await deps.followRedirects(url)
+        mid = extractQqSongmid(finalUrl)
+      }
 
       if (!mid) {
         const fromText = text ?? finalUrl?.href ?? ''

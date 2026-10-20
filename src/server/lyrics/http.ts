@@ -45,12 +45,18 @@ export async function followRedirects(input: URL, maxHops = 3): Promise<URL> {
   let current = input
   for (let hop = 0; hop < maxHops; hop += 1) {
     assertAllowed(current)
-    const response = await fetch(current, {
-      method: 'GET',
-      redirect: 'manual',
-      headers: { 'User-Agent': USER_AGENT },
-      signal: AbortSignal.timeout(10_000),
-    })
+    let response: Response
+    try {
+      response = await fetch(current, {
+        method: 'GET',
+        redirect: 'manual',
+        headers: { 'User-Agent': USER_AGENT },
+        signal: AbortSignal.timeout(10_000),
+      })
+    } catch {
+      // 短链域名不可达时保留原链接，交给 Provider 判断是否还能继续
+      return current
+    }
     await response.body?.cancel()
 
     if (response.status < 300 || response.status >= 400) return current
