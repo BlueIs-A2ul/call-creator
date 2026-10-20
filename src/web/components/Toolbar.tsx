@@ -6,9 +6,10 @@ interface Props {
   onOpenLibrary: () => void
   onOpenExport: () => void
   onRefetch: () => void
+  onOpenInterlude: () => void
 }
 
-export function Toolbar({ project, onOpenLibrary, onOpenExport, onRefetch }: Props) {
+export function Toolbar({ project, onOpenLibrary, onOpenExport, onRefetch, onOpenInterlude }: Props) {
   const dirty = useProjectStore((state) => state.dirty)
   const undo = useProjectStore((state) => state.undo)
   const redo = useProjectStore((state) => state.redo)
@@ -30,6 +31,7 @@ export function Toolbar({ project, onOpenLibrary, onOpenExport, onRefetch }: Pro
         <button className="btn btn-ghost" onClick={undo}>撤销</button>
         <button className="btn btn-ghost" onClick={redo}>重做</button>
         <button className="btn btn-ghost" onClick={onRefetch}>重抓歌词</button>
+        <button className="btn btn-ghost" onClick={onOpenInterlude}>识别间奏</button>
         <button className="btn btn-ghost" onClick={onOpenLibrary}>词库</button>
         <button className="btn btn-primary" onClick={onOpenExport}>导出</button>
       </div>

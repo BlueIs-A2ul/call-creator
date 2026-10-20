@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Row } from '@shared/types'
+import { formatClock, interludeBadgeFor } from '@shared/interludes'
 import { useProjectStore } from '@web/state/project-store'
 import { LyricCell } from './LyricCell'
 import { CallCell } from './CallCell'
@@ -40,6 +41,18 @@ export function SheetTable() {
               >
                 <td className="row-no">
                   <span>{index + 1}</span>
+                  {(() => {
+                    const badge = interludeBadgeFor(project.rows, index)
+                    if (!badge) return null
+                    return (
+                      <span
+                        className="interlude-badge"
+                        title="起点为上一句歌词的起始时间；间奏实际从上一句唱完开始，为近似值"
+                      >
+                        间奏 {formatClock(badge.startMs)}–{formatClock(badge.endMs)}
+                      </span>
+                    )
+                  })()}
                   <button className="insert-btn" title="在下方插入空白行" onClick={() => insertRow(row.id)}>＋</button>
                   <button className="delete-btn" title="删除行" onClick={() => deleteRows([row.id])}>×</button>
                 </td>
