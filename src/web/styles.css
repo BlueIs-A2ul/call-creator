@@ -15,3 +15,43 @@ body {
   color: var(--text);
   font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
 }
+.app { min-height: 100vh; }
+.toolbar {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; padding: 10px 16px; background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+.toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 10px; }
+.save-status { font-size: 12px; color: var(--muted); }
+.save-status.is-dirty { color: #b07b2c; }
+.btn {
+  border: 1px solid var(--line); background: var(--panel); color: var(--text);
+  padding: 7px 12px; border-radius: 8px; cursor: pointer; font: inherit;
+}
+.btn:hover { border-color: #cfcfc8; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: white; }
+.btn-ghost { background: transparent; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.project-list { max-width: 760px; margin: 0 auto; padding: 48px 20px; }
+.new-project { display: flex; gap: 8px; margin: 16px 0; }
+.new-project input {
+  flex: 1; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 8px; font: inherit; background: var(--panel);
+}
+.paste-area { width: 100%; min-height: 140px; margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; }
+.project-card {
+  display: flex; justify-content: space-between; gap: 12px; width: 100%;
+  padding: 12px 14px; margin-bottom: 8px; background: var(--panel);
+  border: 1px solid var(--line); border-radius: 8px; cursor: pointer; text-align: left;
+}
+.project-card small { color: var(--muted); }
+.project-row { display: flex; gap: 8px; align-items: stretch; }
+.project-row .project-card { flex: 1; margin-bottom: 8px; }
+.title-input {
+  border: 1px solid transparent; background: transparent; font: inherit;
+  font-weight: 600; padding: 2px 4px; border-radius: 6px; min-width: 160px;
+}
+.title-input:hover, .title-input:focus { border-color: var(--line); outline: none; background: white; }
+.error { color: var(--danger); }
+.muted { color: var(--muted); }
