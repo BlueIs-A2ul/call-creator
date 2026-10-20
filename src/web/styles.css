@@ -128,3 +128,4 @@ tr.is-blank td { background: #fbfbf8; }
   white-space: pre-wrap; max-height: 96px; overflow: hidden; color: #444;
 }
 .library-item .btn { align-self: flex-start; }
+.checkbox { flex-direction: row !important; align-items: center; gap: 8px !important; }
