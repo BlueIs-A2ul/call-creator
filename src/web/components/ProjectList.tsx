@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { LyricsResult, ProjectSummary, SongCandidate } from '@shared/types'
+import { applyInterludeSlots, findInterludeSlots } from '@shared/interludes'
 import { api } from '@web/api'
 import { useProjectStore } from '@web/state/project-store'
 import { nanoid } from 'nanoid'
@@ -21,13 +22,16 @@ export function ProjectList() {
   }, [])
 
   const createFromResult = async (result: LyricsResult) => {
+    const baseRows = result.lines.map((line) => ({ id: nanoid(), lyric: line.text, timeMs: line.timeMs }))
+    const slots = findInterludeSlots(baseRows)
+    const rows = applyInterludeSlots(baseRows, new Set(slots.map((slot) => slot.beforeId)))
     const project = await api.createProject({
       title: result.title || '未命名',
       artist: result.artist,
       album: result.album,
       durationMs: result.durationMs,
       source: { provider: result.provider, url: result.sourceUrl, fetchedAt: new Date().toISOString() },
-      rows: result.lines.map((line) => ({ id: nanoid(), lyric: line.text, timeMs: line.timeMs })),
+      rows,
     })
     load(project)
   }
