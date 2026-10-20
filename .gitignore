@@ -3,6 +3,8 @@ dist/
 data/
 *.log
 .DS_Store
-demo/screenshot*.png
 # 设计文档和实现计划只在本地保留，不进仓库
 docs/superpowers/
+# 早期原型 demo 和示例导出的表格只是本地参考
+demo/
+示例.xlsx
