@@ -74,6 +74,15 @@ export function ProjectList() {
       <h1>Call Sheet</h1>
       <p className="muted">粘贴网易云或 QQ 音乐的分享链接，生成可编辑的 call 表。</p>
 
+      <section className="notice" aria-label="关于间奏时间">
+        <strong>关于间奏时间</strong>
+        <p>
+          自动识别出的间奏行，起点是「上一句歌词的起始时间」，会比真实间奏偏早。原因：LRC
+          歌词只有每句的句首时间戳、没有行尾时间，而间奏要等上一句唱完才开始；网易云的逐字
+          歌词字段目前在公开接口里不返回数据，无法做到精确到行尾。终点取下一句歌词的起始时间，基本准确。
+        </p>
+      </section>
+
       <div className="new-project">
         <input
           value={input}
