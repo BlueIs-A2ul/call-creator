@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { findPlaceholders } from '@shared/substitute'
 import type { CallCell, Row } from '@shared/types'
 import { useProjectStore } from '@web/state/project-store'
+import { LibraryDrawer } from './LibraryDrawer'
 
 interface Props {
   row: Row
@@ -11,6 +12,7 @@ interface Props {
 export function CallEditor({ row, onClose }: Props) {
   const project = useProjectStore((state) => state.project)!
   const updateCall = useProjectStore((state) => state.updateCall)
+  const [libraryOpen, setLibraryOpen] = useState(false)
   const [call, setCall] = useState<CallCell>(
     row.call ?? { text: '', tags: [] },
   )
@@ -36,6 +38,7 @@ export function CallEditor({ row, onClose }: Props) {
         </label>
         <label>
           正文
+          <button className="btn btn-ghost" onClick={() => setLibraryOpen(true)}>从词库选择</button>
           <textarea
             className="call-textarea"
             value={call.text}
@@ -76,6 +79,20 @@ export function CallEditor({ row, onClose }: Props) {
           <button className="btn btn-ghost" onClick={onClose}>取消</button>
           <button className="btn btn-primary" onClick={save}>保存</button>
         </div>
+        {libraryOpen && (
+          <LibraryDrawer
+            onClose={() => setLibraryOpen(false)}
+            onPick={(entry) => {
+              setCall((current) => ({
+                ...current,
+                label: entry.filename,
+                tags: entry.keywords,
+                sourceId: entry.id,
+                text: current.text ? `${current.text}\n${entry.text_content}` : entry.text_content,
+              }))
+            }}
+          />
+        )}
       </div>
     </div>
   )
