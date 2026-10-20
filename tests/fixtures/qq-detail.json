@@ -1,0 +1,13 @@
+{
+  "req_0": {
+    "code": 0,
+    "data": {
+      "track_info": {
+        "name": "晴天",
+        "interval": 269,
+        "singer": [{ "name": "周杰伦" }],
+        "album": { "name": "叶惠美" }
+      }
+    }
+  }
+}

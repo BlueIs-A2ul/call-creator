@@ -1,0 +1,14 @@
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  .toolbar, .drawer, .modal-backdrop, .insert-btn, .delete-btn, .call-empty { display: none !important; }
+  body { background: white; }
+  .sheet-wrap { padding: 0; overflow: visible; }
+  .sheet { width: 100%; border-collapse: collapse; }
+  .sheet thead { display: table-header-group; }
+  .sheet tr { break-inside: avoid; }
+  .sheet th, .sheet td { border: 1px solid #999; }
+  .sheet th { background: #eee !important; }
+  .lyric-input, .call-cell { padding: 6px 8px; }
+  .call-cell { cursor: default; }
+  .call-label { border: 1px solid #999; background: transparent; color: black; }
+}
