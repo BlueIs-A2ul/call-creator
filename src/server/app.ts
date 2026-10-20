@@ -46,6 +46,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     if (error instanceof StoreError) {
       return reply.status(error.code === 'NOT_FOUND' ? 404 : 409).send({ code: error.code, message: error.message })
     }
+    // 客户端对空 body 的 DELETE 带了 application/json 时是请求问题，不该当 500
+    if ((error as { code?: string }).code === 'FST_ERR_CTP_EMPTY_JSON_BODY') {
+      return reply.status(400).send({ code: 'INVALID_BODY', message: '请求体不能为空' })
+    }
     const name = (error as { name?: string }).name
     const message = error instanceof Error ? error.message : String(error)
     if (name === 'ZodError') {

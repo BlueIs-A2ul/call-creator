@@ -1,10 +1,11 @@
 import type { ExportOptions, LibraryEntry, LyricsResult, Project, ProjectSummary } from '@shared/types'
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-  })
+  const headers: Record<string, string> = { ...((init?.headers as Record<string, string> | undefined) ?? {}) }
+  // 只有带 body 的请求才声明 JSON；空 body 的 DELETE/GET 带上 application/json
+  // 会被 Fastify 以 FST_ERR_CTP_EMPTY_JSON_BODY 拒绝
+  if (init?.body !== undefined) headers['Content-Type'] = 'application/json'
+  const response = await fetch(path, { ...init, headers })
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { message?: string } | null
     throw new Error(body?.message ?? `请求失败（${response.status}）`)

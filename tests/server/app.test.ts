@@ -141,4 +141,41 @@ describe('api', () => {
     expect(response.json()).toMatchObject({ code: 'INVALID_URL', message: '不支持的域名：example.com' })
     warn.mockRestore()
   })
+
+  it('删除项目：不带 body 的 DELETE 正常返回', async () => {
+    const app = await makeApp()
+    const created = (
+      await app.inject({
+        method: 'POST',
+        url: '/api/projects',
+        payload: { title: 'A', artist: 'B', rows: [] },
+      })
+    ).json()
+
+    const response = await app.inject({ method: 'DELETE', url: `/api/projects/${created.id}` })
+    expect(response.statusCode).toBe(200)
+    const list = await app.inject({ method: 'GET', url: '/api/projects' })
+    expect(list.json()).toEqual([])
+  })
+
+  it('DELETE 带 JSON Content-Type 但空 body 时返回 400 而不是 500', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const app = await makeApp()
+    const created = (
+      await app.inject({
+        method: 'POST',
+        url: '/api/projects',
+        payload: { title: 'A', artist: 'B', rows: [] },
+      })
+    ).json()
+
+    const response = await app.inject({
+      method: 'DELETE',
+      url: `/api/projects/${created.id}`,
+      headers: { 'content-type': 'application/json' },
+    })
+    expect(response.statusCode).toBe(400)
+    expect(response.json().code).toBe('INVALID_BODY')
+    error.mockRestore()
+  })
 })
