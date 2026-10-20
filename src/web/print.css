@@ -1,6 +1,6 @@
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
-  .toolbar, .drawer, .modal-backdrop, .insert-btn, .delete-btn, .call-empty { display: none !important; }
+  .toolbar, .drawer, .modal-backdrop, .insert-btn, .delete-btn, .call-empty, .selection-bar, .row-pick { display: none !important; }
   body { background: white; }
   .sheet-wrap { padding: 0; overflow: visible; }
   .sheet { width: 100%; border-collapse: collapse; }

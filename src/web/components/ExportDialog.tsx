@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { readCallGroups } from '@shared/call-groups'
 import { DEFAULT_EXPORT_OPTIONS, type ExportOptions } from '@shared/types'
 import { api, saveProjectWithRecovery } from '@web/api'
 import { useProjectStore } from '@web/state/project-store'
@@ -9,6 +10,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
   const [options, setOptions] = useState<ExportOptions>(DEFAULT_EXPORT_OPTIONS)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const blockCount = readCallGroups(project.rows).filter((group) => group.rows.length > 1).length
 
   const toggle = (key: keyof ExportOptions) => setOptions((current) => ({ ...current, [key]: !current[key] }))
 
@@ -42,6 +44,11 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
         <label className="checkbox"><input type="checkbox" checked={options.includeNote} onChange={() => toggle('includeNote')} /> 包含备注列</label>
         <label className="checkbox"><input type="checkbox" checked={options.includeTime} onChange={() => toggle('includeTime')} /> 包含时间列</label>
         <label className="checkbox"><input type="checkbox" checked={options.applySubstitutions} onChange={() => toggle('applySubstitutions')} /> 应用占位符替换</label>
+        {blockCount > 0 && (
+          <p className="muted">
+            有 {blockCount} 个跨行的 call，导出 xlsx 时它们的 Call 单元格会纵向合并成一格。
+          </p>
+        )}
         {error && <p className="error">{error}</p>}
         <div className="modal-actions">
           <button className="btn btn-ghost" onClick={() => window.print()}>打印 / 另存 PDF</button>

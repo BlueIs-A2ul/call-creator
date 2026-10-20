@@ -7,6 +7,7 @@ export const callCellSchema = z.object({
   sourceId: z.string().optional(),
   overrides: z.record(z.string()).optional(),
   note: z.string().optional(),
+  groupId: z.string().optional(),
 })
 
 export const rowSchema = z.object({

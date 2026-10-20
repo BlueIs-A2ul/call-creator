@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { findCallGroup } from '@shared/call-groups'
 import { findPlaceholders } from '@shared/substitute'
 import type { CallCell, Row } from '@shared/types'
 import { useProjectStore } from '@web/state/project-store'
@@ -12,12 +13,15 @@ interface Props {
 export function CallEditor({ row, onClose }: Props) {
   const project = useProjectStore((state) => state.project)!
   const updateCall = useProjectStore((state) => state.updateCall)
+  const unlinkFromGroup = useProjectStore((state) => state.unlinkFromGroup)
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [call, setCall] = useState<CallCell>(
     row.call ?? { text: '', tags: [] },
   )
 
   const tokens = findPlaceholders(call.text)
+  const slotInfo = findCallGroup(project.rows, row.id)
+  const grouped = Boolean(slotInfo && slotInfo.size > 1)
 
   const save = () => {
     updateCall(row.id, call.text.trim() ? call : undefined)
@@ -28,6 +32,12 @@ export function CallEditor({ row, onClose }: Props) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(event) => event.stopPropagation()}>
         <h3>编辑 Call</h3>
+        {grouped && (
+          <p className="group-hint">
+            这是「{slotInfo!.group.rows[0].call?.label ?? '未命名'}」的第 {slotInfo!.slot + 1}/
+            {slotInfo!.size} 段：改名称或标签会同步整块，改正文只影响这一行。
+          </p>
+        )}
         <label>
           名称
           <input
@@ -76,6 +86,18 @@ export function CallEditor({ row, onClose }: Props) {
           </div>
         )}
         <div className="modal-actions">
+          {grouped && (
+            <button
+              className="btn btn-ghost"
+              title="这一行变成独立的 call，其余行继续成块"
+              onClick={() => {
+                unlinkFromGroup(row.id)
+                onClose()
+              }}
+            >
+              拆出这一行
+            </button>
+          )}
           <button className="btn btn-ghost" onClick={onClose}>取消</button>
           <button className="btn btn-primary" onClick={save}>保存</button>
         </div>

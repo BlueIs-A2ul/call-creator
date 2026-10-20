@@ -138,3 +138,28 @@ tr.is-blank td { background: #fbfbf8; }
   white-space: nowrap;
 }
 .interlude-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.selection-bar {
+  position: sticky; top: 49px; z-index: 15;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 16px; background: var(--accent-soft);
+  border-bottom: 1px solid var(--line); font-size: 13px;
+}
+.row-pick {
+  display: block; margin: 0 auto; border: 1px solid transparent; background: transparent;
+  color: inherit; font: inherit; padding: 0 4px; border-radius: 4px; cursor: pointer;
+}
+.row-pick:hover { border-color: var(--line); background: white; }
+tr.is-selected td { background: var(--accent-soft); }
+tr.is-selected .row-pick { color: var(--accent); font-weight: 700; }
+/* 跨多行的 call：左侧一道竖线把块连起来，续行不再重复名称 */
+.sheet tbody tr.is-grouped .call-cell { box-shadow: inset 3px 0 0 var(--accent); }
+.sheet tbody tr.is-grouped td:last-child { background: #fcfdfc; }
+.call-slot {
+  display: inline-block; font-size: 11px; color: var(--muted);
+  margin-left: 6px; vertical-align: middle;
+}
+.call-blank { color: var(--muted); font-style: italic; }
+.group-hint {
+  margin: 0; padding: 8px 10px; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-size: 12px; line-height: 1.5;
+}

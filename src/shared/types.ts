@@ -7,6 +7,8 @@ export interface CallCell {
   sourceId?: string
   overrides?: Record<string, string>
   note?: string
+  /** 同一个 call 覆盖连续多行歌词时，这些行共享一个 groupId；顺序由行在组内的位置决定。 */
+  groupId?: string
 }
 
 export interface Row {
