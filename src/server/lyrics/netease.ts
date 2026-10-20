@@ -1,5 +1,5 @@
 import { parseLrc } from '@shared/lrc'
-import { extractNeteaseId } from '@shared/urls'
+import { extractNeteaseId, isNeteaseHost } from '@shared/urls'
 import type { LyricsResult } from '@shared/types'
 import { ProviderError } from './errors'
 import { defaultProviderDeps, type ProviderDeps } from './http'
@@ -25,7 +25,7 @@ export function createNeteaseProvider(deps: ProviderDeps = defaultProviderDeps):
   return {
     id: 'netease',
     canHandle(url) {
-      return ['music.163.com', 'y.music.163.com', '163cn.tv'].includes(url.hostname)
+      return isNeteaseHost(url.hostname)
     },
     async fetch({ url }) {
       if (!url) throw new ProviderError('INVALID_URL', '缺少网易云链接')

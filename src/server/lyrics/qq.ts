@@ -1,5 +1,5 @@
 import { parseLrc } from '@shared/lrc'
-import { extractFirstUrl, extractQqSongmid } from '@shared/urls'
+import { extractFirstUrl, extractQqSongId, extractQqSongmid, isQqHost } from '@shared/urls'
 import type { LyricsResult, SongCandidate } from '@shared/types'
 import { ProviderError } from './errors'
 import { defaultProviderDeps, type ProviderDeps } from './http'
@@ -23,6 +23,7 @@ interface QqDetailResponse {
     code: number
     data?: {
       track_info?: {
+        mid?: string
         name: string
         interval?: number
         singer: Array<{ name: string }>
@@ -35,6 +36,14 @@ interface QqDetailResponse {
 interface QqLyricResponse {
   retcode?: number
   lyric?: string
+}
+
+interface TrackInfo {
+  songmid: string
+  title: string
+  artist: string
+  album?: string
+  durationMs?: number
 }
 
 const REFERER = 'https://y.qq.com/'
@@ -50,22 +59,26 @@ function decodeEntities(value: string): string {
     .replace(/&amp;/g, '&')
 }
 
-async function fetchDetail(
+/** 同一个接口既能用 songmid 也能用数字 songid 查歌曲信息。 */
+async function fetchTrack(
   deps: ProviderDeps,
-  songmid: string,
-): Promise<{ title: string; artist: string; album?: string; durationMs?: number }> {
+  id: { songmid?: string; songId?: string },
+): Promise<TrackInfo | null> {
+  const param = id.songmid ? { song_mid: id.songmid } : { song_id: Number(id.songId) }
   const payload = JSON.stringify({
     req_0: {
       module: 'music.pf_song_detail_svr',
       method: 'get_song_detail',
-      param: { song_mid: songmid },
+      param,
     },
   })
   const url = `https://u.y.qq.com/cgi-bin/musicu.fcg?data=${encodeURIComponent(payload)}`
   const detail = await deps.getJson<QqDetailResponse>(url, REFERER)
   const track = detail.req_0?.data?.track_info
-  if (!track) return { title: '', artist: '' }
+  if (!track) return null
+
   return {
+    songmid: track.mid ?? id.songmid ?? '',
     title: track.name,
     artist: track.singer.map((singer) => singer.name).join(' / '),
     album: track.album?.name,
@@ -82,25 +95,35 @@ export function createQqProvider(deps: ProviderDeps = defaultProviderDeps): Lyri
   return {
     id: 'qq',
     canHandle(url) {
-      return ['y.qq.com', 'i.y.qq.com', 'c6.y.qq.com', 'c.y.qq.com', 'u.y.qq.com'].includes(url.hostname)
+      return isQqHost(url.hostname)
     },
     async fetch({ url, text, songmid }) {
       let finalUrl = url ?? null
       let mid = songmid ?? (url ? extractQqSongmid(url) : null)
+      let songId = songmid ? null : url ? extractQqSongId(url) : null
+      let track: TrackInfo | null = null
 
-      // 链接里已经有 songmid 时不需要再多请求一次站点首页
+      // 链接里已经有 songmid 时不需要再多请求一次站点首页；只有短链/纯数字 id 才需要跟着跳转
       if (!mid && url) {
         finalUrl = await deps.followRedirects(url)
         mid = extractQqSongmid(finalUrl)
+        songId = songId ?? extractQqSongId(finalUrl)
       }
 
-      if (!mid) {
-        const fromText = text ?? finalUrl?.href ?? ''
-        const textUrl = extractFirstUrl(fromText)
+      if (!mid && !songId) {
+        const textUrl = extractFirstUrl(text ?? '')
         if (textUrl) {
           const resolved = await deps.followRedirects(textUrl)
           mid = extractQqSongmid(resolved)
+          songId = extractQqSongId(resolved)
         }
+      }
+
+      // i.y.qq.com 这类分享链只有数字 songid，用详情接口换成 songmid
+      if (!mid && songId) {
+        track = await fetchTrack(deps, { songId })
+        mid = track?.songmid || null
+        if (!mid) throw new ProviderError('NO_LYRICS', '没有找到这首歌')
       }
 
       if (!mid) {
@@ -136,17 +159,20 @@ export function createQqProvider(deps: ProviderDeps = defaultProviderDeps): Lyri
         mid = list[0].songmid
       }
 
-      const [detail, lyric] = await Promise.all([fetchDetail(deps, mid), fetchLyric(deps, mid)])
+      const [info, lyric] = await Promise.all([
+        track ? Promise.resolve(track) : fetchTrack(deps, { songmid: mid }),
+        fetchLyric(deps, mid),
+      ])
       const raw = decodeEntities(lyric.lyric ?? '')
       if (!raw.trim()) throw new ProviderError('NO_LYRICS', '这首歌没有可用歌词')
 
       const parsed = parseLrc(raw)
       return {
         provider: 'qq',
-        title: detail.title,
-        artist: detail.artist,
-        album: detail.album,
-        durationMs: detail.durationMs,
+        title: info?.title ?? '',
+        artist: info?.artist ?? '',
+        album: info?.album,
+        durationMs: info?.durationMs,
         lines: parsed.lines,
         raw,
         warnings: parsed.warnings,

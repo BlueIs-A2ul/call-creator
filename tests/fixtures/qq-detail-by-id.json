@@ -1,0 +1,15 @@
+{
+  "req_0": {
+    "code": 0,
+    "data": {
+      "track_info": {
+        "id": 634196637,
+        "mid": "0004vH4R3p9Zju",
+        "name": "Krack",
+        "interval": 200,
+        "singer": [{ "name": "KRACK" }],
+        "album": { "name": "Krack（裂痕）" }
+      }
+    }
+  }
+}
