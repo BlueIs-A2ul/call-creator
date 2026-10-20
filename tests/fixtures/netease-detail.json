@@ -1,0 +1,10 @@
+{
+  "songs": [
+    {
+      "name": "New World",
+      "duration": 234000,
+      "artists": [{ "name": ".LiNIXLiNE." }],
+      "album": { "name": ".LiNIXLiNE. BEST" }
+    }
+  ]
+}
