@@ -55,3 +55,51 @@ body {
 .title-input:hover, .title-input:focus { border-color: var(--line); outline: none; background: white; }
 .error { color: var(--danger); }
 .muted { color: var(--muted); }
+.sheet-wrap { padding: 16px; overflow: auto; }
+.sheet { width: 100%; border-collapse: collapse; background: var(--panel); table-layout: fixed; }
+.sheet th, .sheet td { border: 1px solid var(--line); vertical-align: top; padding: 0; }
+.sheet th { position: sticky; top: 0; background: #fbfbf9; font-weight: 600; padding: 8px; text-align: left; z-index: 5; }
+.col-no { width: 64px; }
+.col-lyric { width: 45%; }
+.col-call { width: auto; }
+.row-no { position: relative; padding: 8px 6px !important; text-align: center; color: var(--muted); font-size: 12px; }
+.insert-btn, .delete-btn {
+  display: none; position: absolute; right: 4px; border: none; background: transparent;
+  cursor: pointer; color: var(--muted); font-size: 14px;
+}
+.insert-btn { top: 2px; }
+.delete-btn { bottom: 2px; }
+tr:hover .insert-btn, tr:hover .delete-btn { display: block; }
+tr.is-blank td { background: #fbfbf8; }
+.lyric-input {
+  width: 100%; border: none; outline: none; resize: none; padding: 9px 10px;
+  font: inherit; line-height: 1.55; background: transparent; min-height: 38px;
+}
+.call-cell {
+  display: block; width: 100%; min-height: 38px; padding: 9px 10px; border: none;
+  background: transparent; text-align: left; font: inherit; cursor: pointer;
+}
+.call-cell:hover { background: var(--accent-soft); }
+.call-empty { color: var(--muted); }
+.call-label {
+  display: inline-block; font-size: 11px; padding: 1px 6px; margin-bottom: 4px;
+  border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+}
+.call-text { display: block; white-space: pre-wrap; line-height: 1.5; }
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+  display: flex; align-items: center; justify-content: center; z-index: 50;
+}
+.modal {
+  width: min(680px, 92vw); max-height: 88vh; overflow: auto; background: var(--panel);
+  border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px;
+}
+.modal label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.modal input, .modal textarea {
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit;
+}
+.call-textarea { min-height: 220px; font-family: ui-monospace, Consolas, monospace; }
+.token-list { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.token-item { flex-direction: row !important; align-items: center; gap: 6px !important; }
+.token-item input { width: 110px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }

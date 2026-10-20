@@ -2,6 +2,7 @@ import { useProjectStore } from '@web/state/project-store'
 import { useAutosave } from '@web/hooks/useAutosave'
 import { ProjectList } from '@web/components/ProjectList'
 import { Toolbar } from '@web/components/Toolbar'
+import { SheetTable } from '@web/components/SheetTable'
 
 export default function App() {
   const project = useProjectStore((state) => state.project)
@@ -17,7 +18,7 @@ export default function App() {
         onOpenExport={() => undefined}
         onRefetch={() => undefined}
       />
-      <p className="muted" style={{ padding: 16 }}>表格将在下一步接入。</p>
+      <SheetTable />
     </div>
   )
 }
