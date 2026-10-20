@@ -1,10 +1,14 @@
-import Fastify from 'fastify'
+import { buildApp } from './app'
 
-const app = Fastify({ logger: false })
 const port = Number(process.env.PORT ?? 8787)
 const host = process.env.HOST ?? '127.0.0.1'
+const dataDir = process.env.DATA_DIR ?? 'data'
 
-app.get('/api/health', async () => ({ ok: true }))
+const app = await buildApp({
+  dataDir,
+  serveStatic: true,
+  libraryUrl: process.env.LIBRARY_URL,
+})
 
 await app.listen({ port, host })
-console.log(`callCreator api listening on http://${host}:${port}`)
+console.log(`callCreator listening on http://${host}:${port}`)
