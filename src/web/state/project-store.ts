@@ -11,19 +11,30 @@ export interface CallSource {
   section?: CallSection
 }
 
+export type SaveStatus = 'idle' | 'saving' | 'error'
+
 interface ProjectState {
   project: Project | null
   past: Project[]
   future: Project[]
   dirty: boolean
+  /** 保存状态：自动保存失败时不能再让界面一直显示「保存中…」 */
+  saveStatus: SaveStatus
+  saveError: string
+  /** 点「重试」时自增，useAutosave 看到变化就立刻重跑并重置退避计数 */
+  saveNonce: number
   lastCommit: { key: string; at: number }
   load: (project: Project) => void
   clear: () => void
   commit: (key: string, mutator: (current: Project) => Project) => void
   undo: () => void
   redo: () => void
+  markSaving: () => void
   markSaved: (project: Project) => void
-  insertRow: (afterId: string | null) => void
+  markSaveFailed: (message: string) => void
+  /** 手动触发一次保存（Ctrl+S 和「重试」按钮） */
+  requestSave: () => void
+  insertRow: (afterId: string | null) => string | null
   deleteRows: (ids: string[]) => void
   moveRow: (from: number, to: number) => void
   updateTitle: (title: string) => void
@@ -42,10 +53,23 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   past: [],
   future: [],
   dirty: false,
+  saveStatus: 'idle',
+  saveError: '',
+  saveNonce: 0,
   lastCommit: { key: '', at: 0 },
 
-  load: (project) => set({ project, past: [], future: [], dirty: false, lastCommit: { key: '', at: 0 } }),
-  clear: () => set({ project: null, past: [], future: [], dirty: false }),
+  load: (project) =>
+    set({
+      project,
+      past: [],
+      future: [],
+      dirty: false,
+      saveStatus: 'idle',
+      saveError: '',
+      lastCommit: { key: '', at: 0 },
+    }),
+  clear: () =>
+    set({ project: null, past: [], future: [], dirty: false, saveStatus: 'idle', saveError: '' }),
 
   commit: (key, mutator) => {
     const current = get().project
@@ -88,16 +112,23 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     })
   },
 
-  markSaved: (project) => set({ project, dirty: false }),
+  markSaving: () => set({ saveStatus: 'saving', saveError: '' }),
+
+  markSaved: (project) => set({ project, dirty: false, saveStatus: 'idle', saveError: '' }),
+
+  markSaveFailed: (message) => set({ saveStatus: 'error', saveError: message }),
+
+  requestSave: () => set((state) => ({ saveNonce: state.saveNonce + 1 })),
 
   insertRow: (afterId) => {
+    const id = nanoid()
     get().commit('', (current) => {
       const index = afterId ? current.rows.findIndex((row) => row.id === afterId) : -1
-      const row = { id: nanoid(), lyric: '' }
       const rows = [...current.rows]
-      rows.splice(index + 1, 0, row)
+      rows.splice(index + 1, 0, { id, lyric: '' })
       return { ...current, rows }
     })
+    return id
   },
 
   deleteRows: (ids) => {

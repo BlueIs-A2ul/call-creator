@@ -42,6 +42,18 @@ export const api = {
   },
   addLibraryEntry: (input: { filename: string; keywords: string[]; text_content: string; link?: string }) =>
     request<LibraryEntry>('/api/library/user', { method: 'POST', body: JSON.stringify(input) }),
+  deleteLibraryEntry: (id: string) =>
+    request<{ ok: true }>(`/api/library/user/${id}`, { method: 'DELETE' }),
+  importXlsx: async (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    const response = await fetch('/api/import/xlsx', { method: 'POST', body: form })
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { message?: string } | null
+      throw new Error(body?.message ?? `导入失败（${response.status}）`)
+    }
+    return response.json() as Promise<LyricsResult>
+  },
   exportXlsx: async (id: string, options: ExportOptions) => {
     const response = await fetch(`/api/projects/${id}/export/xlsx`, {
       method: 'POST',
@@ -57,6 +69,19 @@ export const api = {
  * 保存项目，遇到版本冲突时用服务端最新的 revision 再试一次。
  * 这是本地单用户工具，冲突只可能来自并发保存，不需要覆盖用户刚写的本地内容。
  */
+/**
+ * 页面要关掉时的兜底保存：keepalive 让请求在文档销毁后仍能发出去。
+ * 失败就算了，用户已经离开，没有界面可以报错。
+ */
+export async function saveProjectKeepalive(project: Project): Promise<void> {
+  await fetch(`/api/projects/${project.id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'If-Match': String(project.revision) },
+    body: JSON.stringify(project),
+    keepalive: true,
+  }).catch(() => undefined)
+}
+
 export async function saveProjectWithRecovery(project: Project): Promise<Project> {
   try {
     return await api.saveProject(project)
