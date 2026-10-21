@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { LibraryEntry, Row } from '@shared/types'
 import { formatClock, interludeBadgeFor } from '@shared/interludes'
 import { callGroupIndex } from '@shared/call-groups'
@@ -8,6 +8,8 @@ import { CallCell } from './CallCell'
 import { CallEditor } from './CallEditor'
 import { LibraryDrawer } from './LibraryDrawer'
 
+const TOAST_MS = 5000
+
 export function SheetTable() {
   const project = useProjectStore((state) => state.project)!
   const updateLyric = useProjectStore((state) => state.updateLyric)
@@ -16,11 +18,14 @@ export function SheetTable() {
   const moveRow = useProjectStore((state) => state.moveRow)
   const applyCallToRows = useProjectStore((state) => state.applyCallToRows)
   const clearCalls = useProjectStore((state) => state.clearCalls)
+  const undo = useProjectStore((state) => state.undo)
   const [editing, setEditing] = useState<Row | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dropIndex, setDropIndex] = useState<number | null>(null)
   const [selected, setSelected] = useState<string[]>([])
   const [anchor, setAnchor] = useState<number | null>(null)
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
 
   const groups = useMemo(() => callGroupIndex(project.rows), [project.rows])
   const selectedSet = useMemo(() => new Set(selected), [selected])
@@ -28,6 +33,13 @@ export function SheetTable() {
     () => selected.filter((id) => project.rows.some((row) => row.id === id && row.call)),
     [selected, project.rows],
   )
+
+  // 底部的「已删除…」提示几秒后自己消失
+  useEffect(() => {
+    if (!toast) return
+    const timer = window.setTimeout(() => setToast(null), TOAST_MS)
+    return () => window.clearTimeout(timer)
+  }, [toast])
 
   const selectRow = (index: number, event: React.MouseEvent) => {
     const rows = project.rows
@@ -60,8 +72,30 @@ export function SheetTable() {
   }
 
   const clearSelectedCalls = () => {
+    const count = selectedWithCall.length
     clearCalls([...selectedSet])
     setSelected([])
+    setToast(`已清除 ${count} 行的 call`)
+  }
+
+  const insertAfter = (id: string) => {
+    const created = insertRow(id)
+    // 新行还没渲染出来，等一帧再把焦点放进去
+    if (created) {
+      window.setTimeout(() => {
+        document.querySelector<HTMLTextAreaElement>(`textarea[data-row="${created}"]`)?.focus()
+      }, 0)
+    }
+  }
+
+  const removeRow = (id: string) => {
+    deleteRows([id])
+    setToast('已删除 1 行歌词')
+  }
+
+  const clearOneCall = (id: string) => {
+    clearCalls([id])
+    setToast('已清除这一行的 call')
   }
 
   return (
@@ -106,6 +140,7 @@ export function SheetTable() {
                 isGroupStart ? 'is-group-start' : '',
                 slotInfo && slotInfo.slot === slotInfo.size - 1 ? 'is-group-end' : '',
                 selectedSet.has(row.id) ? 'is-selected' : '',
+                dropIndex === index ? 'is-drop-target' : '',
               ]
                 .filter(Boolean)
                 .join(' ')
@@ -116,10 +151,19 @@ export function SheetTable() {
                   className={className}
                   draggable
                   onDragStart={() => setDragIndex(index)}
-                  onDragOver={(event) => event.preventDefault()}
+                  onDragOver={(event) => {
+                    event.preventDefault()
+                    if (dropIndex !== index) setDropIndex(index)
+                  }}
+                  onDragLeave={() => setDropIndex((current) => (current === index ? null : current))}
                   onDrop={() => {
-                    if (dragIndex !== null) moveRow(dragIndex, index)
+                    if (dragIndex !== null && dragIndex !== index) moveRow(dragIndex, index)
                     setDragIndex(null)
+                    setDropIndex(null)
+                  }}
+                  onDragEnd={() => {
+                    setDragIndex(null)
+                    setDropIndex(null)
                   }}
                 >
                   <td className="row-no">
@@ -143,7 +187,7 @@ export function SheetTable() {
                         className="row-action"
                         title="在下方插入空白行"
                         aria-label="在下方插入空白行"
-                        onClick={() => insertRow(row.id)}
+                        onClick={() => insertAfter(row.id)}
                       >
                         ＋
                       </button>
@@ -151,14 +195,18 @@ export function SheetTable() {
                         className="row-action"
                         title="删除行"
                         aria-label="删除行"
-                        onClick={() => deleteRows([row.id])}
+                        onClick={() => removeRow(row.id)}
                       >
                         ×
                       </button>
                     </div>
                   </td>
                   <td>
-                    <LyricCell value={row.lyric} onChange={(lyric) => updateLyric(row.id, lyric)} />
+                    <LyricCell
+                      rowId={row.id}
+                      value={row.lyric}
+                      onChange={(lyric) => updateLyric(row.id, lyric)}
+                    />
                   </td>
                   <td className="cell-call">
                     <CallCell
@@ -175,7 +223,7 @@ export function SheetTable() {
                         className="clear-call"
                         title={slotInfo && slotInfo.size > 1 ? '清除这一行的 call（整块要清就选中整块再点上方「清除 call」）' : '清除这一行的 call'}
                         aria-label="清除这一行的 call"
-                        onClick={() => clearCalls([row.id])}
+                        onClick={() => clearOneCall(row.id)}
                       >
                         清除
                       </button>
@@ -189,6 +237,21 @@ export function SheetTable() {
       </div>
       {editing && <CallEditor row={editing} onClose={() => setEditing(null)} />}
       {pickerOpen && <LibraryDrawer onClose={() => setPickerOpen(false)} onPick={pickCall} />}
+      {toast && (
+        <div className="toast" role="status" aria-live="polite">
+          <span>{toast}</span>
+          <button
+            className="btn btn-ghost"
+            onClick={() => {
+              undo()
+              setToast(null)
+            }}
+          >
+            撤销
+          </button>
+          <button className="btn btn-ghost" onClick={() => setToast(null)}>关闭</button>
+        </div>
+      )}
     </>
   )
 }
