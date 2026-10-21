@@ -3,6 +3,7 @@ import { findCallGroup } from '@shared/call-groups'
 import { findPlaceholders } from '@shared/substitute'
 import type { CallCell, Row } from '@shared/types'
 import { useProjectStore } from '@web/state/project-store'
+import { useEscapeKey } from '@web/hooks/useEscapeKey'
 import { LibraryDrawer } from './LibraryDrawer'
 
 interface Props {
@@ -14,10 +15,12 @@ export function CallEditor({ row, onClose }: Props) {
   const project = useProjectStore((state) => state.project)!
   const updateCall = useProjectStore((state) => state.updateCall)
   const unlinkFromGroup = useProjectStore((state) => state.unlinkFromGroup)
+  const commit = useProjectStore((state) => state.commit)
   const [libraryOpen, setLibraryOpen] = useState(false)
   const [call, setCall] = useState<CallCell>(
     row.call ?? { text: '', tags: [] },
   )
+  useEscapeKey(onClose)
 
   const tokens = findPlaceholders(call.text)
   const slotInfo = findCallGroup(project.rows, row.id)
@@ -28,9 +31,32 @@ export function CallEditor({ row, onClose }: Props) {
     onClose()
   }
 
+  // 本表默认值走 commit，撤销/自动保存与其它编辑保持一致
+  const setVariable = (token: string, value: string) => {
+    commit(`variable:${token}`, (current) => ({
+      ...current,
+      variables: { ...current.variables, [token]: value },
+    }))
+  }
+
+  const setOverride = (token: string, value: string) => {
+    setCall((current) => {
+      const overrides = { ...(current.overrides ?? {}) }
+      if (value) overrides[token] = value
+      else delete overrides[token]
+      return { ...current, overrides: Object.keys(overrides).length > 0 ? overrides : undefined }
+    })
+  }
+
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="编辑 Call"
+        onClick={(event) => event.stopPropagation()}
+      >
         <h3>编辑 Call</h3>
         {grouped && (
           <p className="group-hint">
@@ -70,16 +96,21 @@ export function CallEditor({ row, onClose }: Props) {
         </label>
         {tokens.length > 0 && (
           <div className="token-list">
-            <span className="muted">占位符（留空则保留原样）：</span>
+            <span className="muted">
+              占位符：左边是全表默认值，右边只替换这一个 call（留空则用默认值）
+            </span>
             {tokens.map((token) => (
               <label key={token} className="token-item">
                 {token}
                 <input
                   value={project.variables[token] ?? ''}
-                  onChange={(event) => {
-                    const variables = { ...project.variables, [token]: event.target.value }
-                    useProjectStore.setState({ project: { ...project, variables }, dirty: true })
-                  }}
+                  placeholder="全表默认"
+                  onChange={(event) => setVariable(token, event.target.value)}
+                />
+                <input
+                  value={call.overrides?.[token] ?? ''}
+                  placeholder="仅这个 call"
+                  onChange={(event) => setOverride(token, event.target.value)}
                 />
               </label>
             ))}

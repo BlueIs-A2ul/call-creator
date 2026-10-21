@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { readCallGroups } from '@shared/call-groups'
 import { DEFAULT_EXPORT_OPTIONS, type ExportOptions } from '@shared/types'
 import { api, saveProjectWithRecovery } from '@web/api'
+import { useEscapeKey } from '@web/hooks/useEscapeKey'
 import { useProjectStore } from '@web/state/project-store'
 
 export function ExportDialog({ onClose }: { onClose: () => void }) {
@@ -11,6 +12,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const blockCount = readCallGroups(project.rows).filter((group) => group.rows.length > 1).length
+  useEscapeKey(onClose)
 
   const toggle = (key: keyof ExportOptions) => setOptions((current) => ({ ...current, [key]: !current[key] }))
 
@@ -37,7 +39,13 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="导出"
+        onClick={(event) => event.stopPropagation()}
+      >
         <h3>导出</h3>
         <label className="checkbox"><input type="checkbox" checked={options.mergeBlankRows} onChange={() => toggle('mergeBlankRows')} /> 空白行合并到上一行</label>
         <label className="checkbox"><input type="checkbox" checked={options.includeTags} onChange={() => toggle('includeTags')} /> 包含标签列</label>

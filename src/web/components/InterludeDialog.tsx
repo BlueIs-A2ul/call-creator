@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DEFAULT_MIN_GAP_MS, applyInterludeSlots, findInterludeSlots, formatClock } from '@shared/interludes'
+import { useEscapeKey } from '@web/hooks/useEscapeKey'
 import { useProjectStore } from '@web/state/project-store'
 
 function gapSeconds(gapMs: number): number {
@@ -11,6 +12,7 @@ export function InterludeDialog({ onClose }: { onClose: () => void }) {
   const commit = useProjectStore((state) => state.commit)
   const [minGapSec, setMinGapSec] = useState(DEFAULT_MIN_GAP_MS / 1000)
   const [excluded, setExcluded] = useState<Set<string>>(new Set())
+  useEscapeKey(onClose)
 
   const slots = useMemo(
     () => findInterludeSlots(project.rows, minGapSec * 1000),
@@ -42,7 +44,13 @@ export function InterludeDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label="识别间奏"
+        onClick={(event) => event.stopPropagation()}
+      >
         <h3>识别间奏</h3>
         {timestamps.length === 0 ? (
           <p className="muted">
