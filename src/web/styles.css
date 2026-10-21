@@ -1,4 +1,5 @@
 :root {
+  --toolbar-h: 49px;
   --bg: #f7f7f5;
   --panel: #ffffff;
   --line: #e4e4e0;
@@ -17,7 +18,7 @@ body {
 }
 .app { min-height: 100vh; }
 .toolbar {
-  position: sticky; top: 0; z-index: 20;
+  position: sticky; top: 0; z-index: 20; min-height: var(--toolbar-h);
   display: flex; justify-content: space-between; align-items: center;
   gap: 16px; padding: 10px 16px; background: var(--panel);
   border-bottom: 1px solid var(--line);
@@ -25,6 +26,8 @@ body {
 .toolbar-left, .toolbar-right { display: flex; align-items: center; gap: 10px; }
 .save-status { font-size: 12px; color: var(--muted); }
 .save-status.is-dirty { color: #b07b2c; }
+.save-status.is-error { color: var(--danger); font-weight: 600; }
+.back-btn { margin-right: 2px; }
 .btn {
   border: 1px solid var(--line); background: var(--panel); color: var(--text);
   padding: 7px 12px; border-radius: 8px; cursor: pointer; font: inherit;
@@ -35,6 +38,11 @@ body {
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .project-list { max-width: 760px; margin: 0 auto; padding: 48px 20px; }
 .new-project { display: flex; gap: 8px; margin: 16px 0; }
+.new-project-alt { display: flex; gap: 8px; flex-wrap: wrap; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px;
+  padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
 .new-project input {
   flex: 1; padding: 10px 12px; border: 1px solid var(--line);
   border-radius: 8px; font: inherit; background: var(--panel);
@@ -46,6 +54,7 @@ body {
   border: 1px solid var(--line); border-radius: 8px; cursor: pointer; text-align: left;
 }
 .project-card small { color: var(--muted); }
+.project-card:disabled { opacity: 0.6; cursor: progress; }
 .project-row { display: flex; gap: 8px; align-items: stretch; }
 .project-row .project-card { flex: 1; margin-bottom: 8px; }
 .title-input {
@@ -59,10 +68,12 @@ body {
 .sheet { width: 100%; border-collapse: collapse; background: var(--panel); table-layout: fixed; }
 .sheet th, .sheet td { border: 1px solid var(--line); vertical-align: top; padding: 0; }
 .sheet th { position: sticky; top: 0; background: #fbfbf9; font-weight: 600; padding: 8px; text-align: left; z-index: 5; }
-.col-no { width: 88px; }
+/* 间奏徽标是「间奏 00:45–00:58」，88px 装不下，会顶进歌词列 */
+.col-no { width: 96px; }
 .col-lyric { width: 45%; }
 .col-call { width: auto; }
 .row-no { position: relative; padding: 8px 6px !important; text-align: center; color: var(--muted); font-size: 12px; }
+.sheet tbody tr.is-drop-target { box-shadow: inset 0 2px 0 var(--accent); }
 /* 选行数字居中；插入/删除挂在右侧竖排，和数字拉开距离，避免误触 */
 .row-actions {
   position: absolute; top: 50%; right: 3px; transform: translateY(-50%);
@@ -122,8 +133,8 @@ tr:hover .clear-call, tr:focus-within .clear-call { display: block; }
 }
 .call-textarea { min-height: 220px; font-family: ui-monospace, Consolas, monospace; }
 .token-list { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.token-item { flex-direction: row !important; align-items: center; gap: 6px !important; }
-.token-item input { width: 110px; }
+.token-item { flex-direction: row !important; align-items: center; gap: 6px !important; flex-wrap: wrap; }
+.token-item input { width: 96px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 .drawer {
   position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 94vw);
@@ -150,6 +161,16 @@ tr:hover .clear-call, tr:focus-within .clear-call { display: block; }
   white-space: pre-wrap; max-height: 96px; overflow: hidden; color: #444;
 }
 .library-item .btn { align-self: flex-start; }
+.library-actions { display: flex; gap: 8px; }
+.library-new {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px; border: 1px dashed var(--line); border-radius: 8px;
+}
+.library-new input, .library-new textarea {
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit;
+}
+.library-new textarea { min-height: 90px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+.library-new .btn { align-self: flex-start; }
 .checkbox { flex-direction: row !important; align-items: center; gap: 8px !important; }
 .interlude-badge {
   display: block;
@@ -157,11 +178,12 @@ tr:hover .clear-call, tr:focus-within .clear-call { display: block; }
   font-size: 11px;
   line-height: 1.3;
   color: var(--accent);
-  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  word-break: keep-all;
 }
 .interlude-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
 .selection-bar {
-  position: sticky; top: 49px; z-index: 15;
+  position: sticky; top: var(--toolbar-h); z-index: 15;
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   padding: 8px 16px; background: var(--accent-soft);
   border-bottom: 1px solid var(--line); font-size: 13px;
@@ -198,3 +220,14 @@ tr.is-selected .row-pick { color: var(--accent); font-weight: 700; }
 }
 .notice strong { color: var(--text); }
 .notice p { margin: 2px 0 0; }
+/* 删除行 / 清 call 之后的底部提示，带「撤销」 */
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 12px;
+  padding: 8px 12px; border-radius: 10px; z-index: 70;
+  background: #23231f; color: #f5f5f2; font-size: 13px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+}
+.toast .btn { color: #f5f5f2; border-color: rgba(255, 255, 255, 0.28); }
+.toast .btn:hover { border-color: #f5f5f2; }
+@media print { .toast { display: none !important; } }
