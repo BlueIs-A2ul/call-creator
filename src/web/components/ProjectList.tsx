@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { LyricsResult, ProjectSummary, SongCandidate } from '@shared/types'
 import { applyInterludeSlots, findInterludeSlots } from '@shared/interludes'
 import { api } from '@web/api'
@@ -8,14 +8,29 @@ import { nanoid } from 'nanoid'
 export function ProjectList() {
   const load = useProjectStore((state) => state.load)
   const [projects, setProjects] = useState<ProjectSummary[]>([])
+  const [listError, setListError] = useState('')
+  const [listLoading, setListLoading] = useState(true)
+  const [openingId, setOpeningId] = useState<string | null>(null)
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [candidates, setCandidates] = useState<SongCandidate[]>([])
   const [pasteMode, setPasteMode] = useState(false)
   const [pasted, setPasted] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
 
-  const refresh = () => api.listProjects().then(setProjects).catch(() => setProjects([]))
+  // 读不到列表和「一条都没有」是两件事，别都显示成「还没有项目」
+  const refresh = async () => {
+    setListLoading(true)
+    try {
+      setProjects(await api.listProjects())
+      setListError('')
+    } catch (cause) {
+      setListError(cause instanceof Error ? cause.message : '读取项目列表失败')
+    } finally {
+      setListLoading(false)
+    }
+  }
 
   useEffect(() => {
     void refresh()
@@ -69,6 +84,30 @@ export function ProjectList() {
     }
   }
 
+  const openProject = async (project: ProjectSummary) => {
+    setOpeningId(project.id)
+    setListError('')
+    try {
+      load(await api.getProject(project.id))
+    } catch (cause) {
+      setListError(cause instanceof Error ? cause.message : '打开项目失败')
+    } finally {
+      setOpeningId(null)
+    }
+  }
+
+  const importXlsx = async (file: File) => {
+    setBusy(true)
+    setError('')
+    try {
+      await createFromResult(await api.importXlsx(file))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '导入失败')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="project-list">
       <h1>Call Sheet</h1>
@@ -95,9 +134,30 @@ export function ProjectList() {
         </button>
       </div>
 
-      <button className="btn btn-ghost" onClick={() => setPasteMode((value) => !value)}>
-        {pasteMode ? '改用链接' : '抓取失败？粘贴歌词'}
-      </button>
+      <div className="new-project-alt">
+        <button className="btn btn-ghost" onClick={() => setPasteMode((value) => !value)}>
+          {pasteMode ? '改用链接' : '抓取失败？粘贴歌词'}
+        </button>
+        <button
+          className="btn btn-ghost"
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+          title="把只有歌词列的 xlsx 读成歌词行"
+        >
+          {busy ? '处理中…' : '导入表格（.xlsx）'}
+        </button>
+        <input
+          ref={fileRef}
+          className="visually-hidden"
+          type="file"
+          accept=".xlsx"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            event.target.value = ''
+            if (file) void importXlsx(file)
+          }}
+        />
+      </div>
 
       {pasteMode && (
         <textarea
@@ -112,7 +172,12 @@ export function ProjectList() {
         <div className="candidates">
           <p>找到多首歌，请选择：</p>
           {candidates.map((candidate) => (
-            <button key={candidate.songmid} className="btn btn-ghost" onClick={() => chooseCandidate(candidate)}>
+            <button
+              key={candidate.songmid}
+              className="btn btn-ghost"
+              onClick={() => chooseCandidate(candidate)}
+              disabled={busy}
+            >
               {candidate.title} — {candidate.artist}
             </button>
           ))}
@@ -122,16 +187,24 @@ export function ProjectList() {
       {error && <p className="error">{error}</p>}
 
       <h2>已保存</h2>
-      {projects.length === 0 && <p className="muted">还没有项目</p>}
+      {listLoading && projects.length === 0 && <p className="muted">读取中…</p>}
+      {listError && (
+        <p className="error">
+          {listError}{' '}
+          <button className="btn btn-ghost" onClick={() => void refresh()}>重试</button>
+        </p>
+      )}
+      {!listLoading && !listError && projects.length === 0 && <p className="muted">还没有项目</p>}
       {projects.map((project) => (
         <div key={project.id} className="project-row">
           <button
             className="project-card"
-            onClick={() => api.getProject(project.id).then(load)}
+            onClick={() => void openProject(project)}
+            disabled={openingId === project.id}
           >
             <strong>{project.title}</strong>
             <span>{project.artist}</span>
-            <small>{project.rowCount} 行</small>
+            <small>{openingId === project.id ? '打开中…' : `${project.rowCount} 行`}</small>
           </button>
           <button
             className="btn btn-ghost"
